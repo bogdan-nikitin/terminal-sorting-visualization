@@ -9,11 +9,15 @@ class AccessPrinterList(list):
     # ACCESS_ELEMENT_CHAR = colorama.Fore.RED + '▓' if colorama else '░'
     ELEMENT_CHAR = '▓'
     ACCESS_ELEMENT_CHAR = '░'
+
     # ELEMENT_CHAR = colorama.Back.WHITE + ' '
     # ACCESS_ELEMENT_CHAR = colorama.Back.RED + ' '
 
     @functools.wraps(list.__init__)
     def __init__(self, *args, **kwargs):
+        """
+        Inits list and cashes some list properties
+        """
         super().__init__(*args, **kwargs)
         self.__length = len(self)
         self.__maximum = max(self)
@@ -21,6 +25,9 @@ class AccessPrinterList(list):
         self._first_print()
 
     def _first_print(self):
+        """
+        Prints all elements for the first time
+        """
         clear_terminal()
         to_print = ''
         for i in range(self.__maximum):
@@ -31,10 +38,13 @@ class AccessPrinterList(list):
                 else:
                     to_print += ' '
             to_print += '\n'
-        to_print += colorama.Cursor.UP()
-        print(to_print)
+        print(to_print, end='')
 
     def recalculate(self):
+        """
+        Recalculates the cashed list properties. Always use it, when you adding
+        or removing an element
+        """
         self.__length = len(self)
         self.__maximum = max(self)
 
@@ -60,15 +70,18 @@ class AccessPrinterList(list):
         if element >= value:
             to_print += colorama.Cursor.UP(element)
             to_print += (
-                                char + colorama.Cursor.BACK() + colorama.Cursor.DOWN()
+                                char + colorama.Cursor.BACK() +
+                                colorama.Cursor.DOWN()
                         ) * element
         else:
             to_print += colorama.Cursor.UP(value)
             to_print += (
-                                ' ' + colorama.Cursor.BACK() + colorama.Cursor.DOWN()
+                                ' ' + colorama.Cursor.BACK() +
+                                colorama.Cursor.DOWN()
                         ) * (value - element)
             to_print += (
-                                char + colorama.Cursor.BACK() + colorama.Cursor.DOWN()
+                                char + colorama.Cursor.BACK() +
+                                colorama.Cursor.DOWN()
                         ) * element
         to_print += colorama.Cursor.BACK(item)
         return to_print
