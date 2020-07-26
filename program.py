@@ -3,6 +3,7 @@ import random
 import runpy
 import time
 import typing
+import shutil
 
 import terminal_utils
 from access_printer_list import AccessPrinterList
@@ -10,8 +11,6 @@ from singleton import Singleton
 from sorting_algorithms import SORTING_ALGORITHMS
 
 DEFAULT_MINIMUM = 1
-DEFAULT_MAXIMUM = 70  # 80
-DEFAULT_LENGTH = 200
 DESCRIPTION = (
     'Visualization of sorting algorithms in a terminal. For better experience '
     'you need to install the colorama package'
@@ -29,11 +28,19 @@ SCRIPT_ARG_HELP = (
 )
 MIN_HELP = 'Minimum value of the generating array. Must be greater, than 0'
 MAX_HELP = (
-    'Maximum value of the generating array. Must be greater, than --min value'
+    'Maximum value of the generating array. Must be greater, than --min value. '
+    'By default it\'s equal to half of the height of the terminal'
 )
 LENGTH_HELP = (
-    'Count of the array elements. Must be greater, than 0'
+    'Count of the array elements. Must be greater, than 0. By default it\'s '
+    'equal to half of the width of the terminal'
 )
+
+
+def print_terminal_size(columns=None, lines=None):
+    if not (columns and lines):
+        columns, lines = shutil.get_terminal_size()
+    print(f'Your terminal size is ({columns}, {lines})')
 
 
 def create_array(
@@ -59,6 +66,11 @@ class Program(Singleton):
 
         # Parser arguments
         self._args = None
+
+        # Array properties
+        self._min_element = None
+        self._max_element = None
+        self._array_length = None
 
         # Function which be used for array sorting
         self._sorting_function = None
@@ -91,14 +103,12 @@ class Program(Singleton):
         )
         self._parser.add_argument(
             '--max',
-            default=DEFAULT_MAXIMUM,
             help=MAX_HELP,
             type=int,
             dest='max'
         )
         self._parser.add_argument(
-            '-N', '--array-length',
-            default=DEFAULT_LENGTH,
+            '-N', '--length',
             help=LENGTH_HELP,
             type=int,
             dest='length'
@@ -130,7 +140,7 @@ class Program(Singleton):
             try:
                 script_dict = runpy.run_path(script)
                 self._sorting_function = script_dict.get(algorithm)
-                if not self._sorting_function :
+                if not self._sorting_function:
                     print(
                         f'Error. There is no {algorithm} function in the '
                         f'{script}'
@@ -147,16 +157,42 @@ class Program(Singleton):
         else:
             self._sorting_function = SORTING_ALGORITHMS[self._args.algorithm]
 
-        # Now checking --min, --max and --length args
+        # Now checking --min, --max and --length args and setting
+        # _min_element, _max_element and _array_length fields
+        columns, lines = shutil.get_terminal_size()
+
+        self._min_element = self._args.min
         if not self._args.min > 0:
             print('Error. --min value must be greater than 0')
             return False
-        if not self._args.max > self._args.min:
-            print('Error. --max value must be greater than --min value')
+        elif self._args.min >= lines:
+            print('Error. --min value must be less than your terminal size')
+            print_terminal_size(columns, lines)
             return False
-        if not self._args.length > 0:
-            print('Error. --length value must be greater than 0')
-            return False
+
+        if self._args.max is None:
+            self._max_element = lines // 2
+        else:
+            if self._args.max >= lines:
+                print('Error. --max value must be less than your terminal size')
+                print_terminal_size(columns, lines)
+                return False
+            elif not self._args.max >= self._args.min:
+                print('Error. --max value must be greater than or equal to '
+                      '--min value')
+                return False
+            self._max_element = self._args.max
+
+        if self._args.length is None:
+            self._array_length = columns // 2
+        else:
+            if not self._args.length > 0:
+                print('Error. --length value must be greater than 0')
+                return False
+            elif self._args.length >= columns:
+                print('Error. --length value must be less than terminal size')
+                print_terminal_size(columns, lines)
+                return False
 
         # Everything is correct
         return True
@@ -175,7 +211,9 @@ class Program(Singleton):
         if terminal_utils.colorama:
             terminal_utils.colorama.init()
 
-        array = create_array(self._args.min, self._args.max, self._args.length)
+        array = create_array(self._min_element,
+                             self._max_element,
+                             self._array_length)
         to_sort_array = array.copy()
         shuffled_arr = to_sort_array.copy()
         to_sort_array = AccessPrinterList(to_sort_array)
@@ -189,6 +227,7 @@ class Program(Singleton):
 
         # Print sorting info
         sort_time = time.time() - start_time
+        print()
         print('Sorted and visualized for', sort_time)
         print('Original array', shuffled_arr)
         print('Sorted array', list(to_sort_array))

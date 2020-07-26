@@ -1,8 +1,7 @@
 import functools
-import time
 
-from terminal_utils import clear_terminal, move_cursor_to_start, colorama
 import terminal_utils
+from terminal_utils import clear_terminal, move_cursor_to_start, colorama
 
 
 class AccessPrinterList(list):
@@ -10,6 +9,8 @@ class AccessPrinterList(list):
     # ACCESS_ELEMENT_CHAR = colorama.Fore.RED + '▓' if colorama else '░'
     ELEMENT_CHAR = '▓'
     ACCESS_ELEMENT_CHAR = '░'
+    # ELEMENT_CHAR = colorama.Back.WHITE + ' '
+    # ACCESS_ELEMENT_CHAR = colorama.Back.RED + ' '
 
     @functools.wraps(list.__init__)
     def __init__(self, *args, **kwargs):
@@ -59,16 +60,16 @@ class AccessPrinterList(list):
         if element >= value:
             to_print += colorama.Cursor.UP(element)
             to_print += (
-                    char + colorama.Cursor.BACK() + colorama.Cursor.DOWN()
-            ) * element
+                                char + colorama.Cursor.BACK() + colorama.Cursor.DOWN()
+                        ) * element
         else:
             to_print += colorama.Cursor.UP(value)
             to_print += (
-                    ' ' + colorama.Cursor.BACK() + colorama.Cursor.DOWN()
-            ) * (value - element)
+                                ' ' + colorama.Cursor.BACK() + colorama.Cursor.DOWN()
+                        ) * (value - element)
             to_print += (
-                    char + colorama.Cursor.BACK() + colorama.Cursor.DOWN()
-            ) * element
+                                char + colorama.Cursor.BACK() + colorama.Cursor.DOWN()
+                        ) * element
         to_print += colorama.Cursor.BACK(item)
         return to_print
 
