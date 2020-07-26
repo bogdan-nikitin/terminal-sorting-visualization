@@ -189,6 +189,6 @@ class Program(Singleton):
 
         # Print sorting info
         sort_time = time.time() - start_time
-        print('Sorted for', sort_time)
+        print('Sorted and visualized for', sort_time)
         print('Original array', shuffled_arr)
         print('Sorted array', list(to_sort_array))

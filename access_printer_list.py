@@ -37,8 +37,19 @@ class AccessPrinterList(list):
         self.__length = len(self)
         self.__maximum = max(self)
 
-    def __access_item_without_ansi(self, item):
-        pass
+    def __print_item_accessing_without_ansi(self, item):
+        move_cursor_to_start()
+        to_print = ''
+        for i in range(self.__maximum):
+            for j in range(self.__length):
+                if super().__getitem__(j) >= self.__maximum - i:
+                    char = (self.ACCESS_ELEMENT_CHAR if item == j else
+                            self.ELEMENT_CHAR)
+                    to_print += char
+                else:
+                    to_print += ' '
+            to_print += '\n'
+        print(to_print, end='')
 
     def _print_element(self, item, char, element=None) -> str:
         value = super().__getitem__(item)
@@ -61,45 +72,41 @@ class AccessPrinterList(list):
         to_print += colorama.Cursor.BACK(item)
         return to_print
 
-    def _access_item(self, item):
+    def __print_item_getting_with_ansi(self, item):
         to_print = ''
-        if terminal_utils.colorama:
-            for i, char in ((self.__last_access_item, self.ELEMENT_CHAR),
-                            (item, self.ACCESS_ELEMENT_CHAR),):
-                if i is not None:
-                    to_print += self._print_element(i, char)
-            to_print += colorama.Cursor.UP()
-        else:
-            move_cursor_to_start()
-            for i in range(self.__maximum):
-                for j in range(self.__length):
-                    if super().__getitem__(j) >= self.__maximum - i:
-                        char = (self.ACCESS_ELEMENT_CHAR if item == j else
-                                self.ELEMENT_CHAR)
-                        to_print += char
-                    else:
-                        to_print += ' '
-                to_print += '\n'
-        print(to_print)
-        # exit()
-        # exit() if self.__last_access_item is not None else None
+        for i, char in ((self.__last_access_item, self.ELEMENT_CHAR),
+                        (item, self.ACCESS_ELEMENT_CHAR),):
+            if i is not None:
+                to_print += self._print_element(i, char)
+        print(to_print, end='')
         self.__last_access_item = item
 
-    def __setitem__(self, key, value):
-        # self._access_item(key)
-        print(self._print_element(self.__last_access_item, self.ELEMENT_CHAR)
-              + colorama.Cursor.UP())
-        print(self._print_element(key, self.ACCESS_ELEMENT_CHAR) +
-              colorama.Cursor.UP())
-        print(self._print_element(key, self.ACCESS_ELEMENT_CHAR,
-                                  value) + colorama.Cursor.UP())
+    def __print_item_setting_with_ansi(self, key, value):
+        to_print = ''
+        to_print += self._print_element(
+            self.__last_access_item, self.ELEMENT_CHAR
+        )
+        to_print += self._print_element(key, self.ACCESS_ELEMENT_CHAR)
+        print(to_print, end='')
+        print(
+            self._print_element(key, self.ACCESS_ELEMENT_CHAR, value),
+            end=''
+        )
         self.__last_access_item = key
-        # result = super().__setitem__(key, value)
-        # self._access_item(key)
 
-        return super().__setitem__(key, value)
-        # return result
+    def __setitem__(self, key, value):
+        if terminal_utils.colorama:
+            self.__print_item_setting_with_ansi(key, value)
+            return super().__setitem__(key, value)
+        else:
+            self.__print_item_accessing_without_ansi(key)
+            item = super().__setitem__(key, value)
+            self.__print_item_accessing_without_ansi(key)
+            return item
 
     def __getitem__(self, item):
-        self._access_item(item)
+        if terminal_utils.colorama:
+            self.__print_item_getting_with_ansi(item)
+        else:
+            self.__print_item_accessing_without_ansi(item)
         return super().__getitem__(item)
