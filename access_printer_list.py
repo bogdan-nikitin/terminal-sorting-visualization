@@ -37,43 +37,28 @@ class AccessPrinterList(list):
         self.__length = len(self)
         self.__maximum = max(self)
 
-    def _print_element(self, item, char):
-        # move_cursor_to_start()
-        element = super().__getitem__(item)
+    def __access_item_without_ansi(self, item):
+        pass
+
+    def _print_element(self, item, char, element=None) -> str:
+        value = super().__getitem__(item)
         to_print = ''
-        # to_print += '\033[H'
-
-        to_print += colorama.Cursor.UP(self.__maximum)
-
-        # last_access = self.__last_access_item or 0
-        # if last_access > item:
-        #     to_print += colorama.Cursor.BACK(last_access - item)
-        # else:
-        #     to_print += colorama.Cursor.FORWARD(item - last_access)
-
-        # to_print += colorama.Cursor.POS(item + 1, '')
         to_print += colorama.Cursor.FORWARD(item)
-        # to_print += f'\033[G'
-        # to_print += colorama.Cursor.FORWARD(2)
-        i = 0
-        for i in range(self.__maximum - element):
-            to_print += ' '
-            to_print += colorama.Cursor.BACK()
-            to_print += colorama.Cursor.DOWN()
-        f_i = i
-        for i in range(element):
-            to_print += char
-            to_print += colorama.Cursor.BACK()
-            # break
-            to_print += colorama.Cursor.DOWN()
-        with open('log.txt', mode='a') as file:
-            file.write(f'i:\t{f_i},\ti:\t{i},\titerations:\t{f_i + i},\t'
-                       f'maximum:\t{self.__maximum},\telement:\t{element},'
-                       f'\titem:\t{item},\tchar:\t{ord(char)}')
-            file.write('\n')
-        # print(f_i, i, f_i + i, self.__maximum, element)
+        element = element or value
+        if element >= value:
+            to_print += colorama.Cursor.UP(element)
+            to_print += (
+                    char + colorama.Cursor.BACK() + colorama.Cursor.DOWN()
+            ) * element
+        else:
+            to_print += colorama.Cursor.UP(value)
+            to_print += (
+                    ' ' + colorama.Cursor.BACK() + colorama.Cursor.DOWN()
+            ) * (value - element)
+            to_print += (
+                    char + colorama.Cursor.BACK() + colorama.Cursor.DOWN()
+            ) * element
         to_print += colorama.Cursor.BACK(item)
-        # time.sleep(0.2)
         return to_print
 
     def _access_item(self, item):
@@ -98,16 +83,22 @@ class AccessPrinterList(list):
         print(to_print)
         # exit()
         # exit() if self.__last_access_item is not None else None
-        # if self.__last_access_item is not None:
-        #     exit()
-        #     print(super().__getitem__(item))
         self.__last_access_item = item
 
     def __setitem__(self, key, value):
-        self._access_item(key)
-        result = super().__setitem__(key, value)
-        self._access_item(key)
-        return result
+        # self._access_item(key)
+        print(self._print_element(self.__last_access_item, self.ELEMENT_CHAR)
+              + colorama.Cursor.UP())
+        print(self._print_element(key, self.ACCESS_ELEMENT_CHAR) +
+              colorama.Cursor.UP())
+        print(self._print_element(key, self.ACCESS_ELEMENT_CHAR,
+                                  value) + colorama.Cursor.UP())
+        self.__last_access_item = key
+        # result = super().__setitem__(key, value)
+        # self._access_item(key)
+
+        return super().__setitem__(key, value)
+        # return result
 
     def __getitem__(self, item):
         self._access_item(item)
