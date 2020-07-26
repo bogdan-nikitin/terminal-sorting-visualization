@@ -5,6 +5,9 @@ from terminal_utils import clear_terminal, move_cursor_to_start, colorama
 
 
 class AccessPrinterList(list):
+    """
+    Class that visualizes access to its items in the terminal
+    """
     # ELEMENT_CHAR = colorama.Fore.WHITE + '▓' if colorama else '▓'
     # ACCESS_ELEMENT_CHAR = colorama.Fore.RED + '▓' if colorama else '░'
     ELEMENT_CHAR = '▓'
@@ -48,7 +51,10 @@ class AccessPrinterList(list):
         self.__length = len(self)
         self.__maximum = max(self)
 
-    def __print_item_accessing_without_ansi(self, item):
+    def __print_item_accessing_without_ansi(self, item) -> None:
+        """
+        Visualize item accessing (getting or setting) without using ANSI codes
+        """
         move_cursor_to_start()
         to_print = ''
         for i in range(self.__maximum):
@@ -86,7 +92,10 @@ class AccessPrinterList(list):
         to_print += colorama.Cursor.BACK(item)
         return to_print
 
-    def __print_item_getting_with_ansi(self, item):
+    def __print_item_getting_with_ansi(self, item) -> None:
+        """
+        Visualize item getting using ANSI codes
+        """
         to_print = ''
         for i, char in ((self.__last_access_item, self.ELEMENT_CHAR),
                         (item, self.ACCESS_ELEMENT_CHAR),):
@@ -96,6 +105,9 @@ class AccessPrinterList(list):
         self.__last_access_item = item
 
     def __print_item_setting_with_ansi(self, key, value):
+        """
+        Visualize item setting using ANSI codes
+        """
         to_print = ''
         to_print += self._print_element(
             self.__last_access_item, self.ELEMENT_CHAR

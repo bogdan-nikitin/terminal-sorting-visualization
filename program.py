@@ -1,9 +1,9 @@
 import argparse
 import random
 import runpy
+import shutil
 import time
 import typing
-import shutil
 
 import terminal_utils
 from access_printer_list import AccessPrinterList
@@ -218,16 +218,19 @@ class Program(Singleton):
         shuffled_arr = to_sort_array.copy()
         to_sort_array = AccessPrinterList(to_sort_array)
 
-        start_time = time.time()
+        # Visualising sorting
+        try:
+            start_time = time.time()
+            self._sorting_function(to_sort_array)
 
-        self._sorting_function(to_sort_array)
-
-        for i in range(len(to_sort_array)):
-            to_sort_array.__getitem__(i)
-
-        # Print sorting info
-        sort_time = time.time() - start_time
-        print()
-        print('Sorted and visualized for', sort_time)
-        print('Original array', shuffled_arr)
-        print('Sorted array', list(to_sort_array))
+            for i in range(len(to_sort_array)):
+                to_sort_array.__getitem__(i)
+            # Print sorting info
+            sort_time = time.time() - start_time
+            print()
+            print('Sorted and visualized for', sort_time)
+            print('Original array', shuffled_arr)
+            print('Sorted array', list(to_sort_array))
+        except KeyboardInterrupt:
+            terminal_utils.clear_terminal()
+            print('Error. Program execution was interrupted')

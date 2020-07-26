@@ -1,4 +1,7 @@
 class Singleton:
+    """
+    Singleton pattern realisation
+    """
     _instance = None
 
     def __new__(cls):
