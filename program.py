@@ -115,9 +115,8 @@ class Program(Singleton):
         )
         self._parser.add_argument(
             '--no-colorama', '-n',
-            default=False,
-            type=bool,
-            dest='no_colorama'
+            dest='no_colorama',
+            action='store_true'
         )
 
     def _is_args_valid(self) -> bool:
@@ -193,6 +192,7 @@ class Program(Singleton):
                 print('Error. --length value must be less than terminal size')
                 print_terminal_size(columns, lines)
                 return False
+            self._array_length = self._args.length
 
         # Everything is correct
         return True
@@ -227,10 +227,15 @@ class Program(Singleton):
                 to_sort_array.__getitem__(i)
             # Print sorting info
             sort_time = time.time() - start_time
+            if terminal_utils.colorama:
+                print(terminal_utils.colorama.Back.RESET +
+                      terminal_utils.colorama.Fore.RESET)
             print()
             print('Sorted and visualized for', sort_time)
             print('Original array', shuffled_arr)
             print('Sorted array', list(to_sort_array))
         except KeyboardInterrupt:
             terminal_utils.clear_terminal()
+            # print(terminal_utils.colorama.Back.RESET +
+            #       terminal_utils.colorama.Fore.RESET)
             print('Error. Program execution was interrupted')
