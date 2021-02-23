@@ -222,7 +222,7 @@ class Program(Singleton):
         try:
             start_time = time.time()
             self._sorting_function(to_sort_array)
-            to_sort_array.sort_finished()
+            to_sort_array.end_of_sort()
             # Print sorting info
             sort_time = time.time() - start_time
             if terminal_utils.colorama:

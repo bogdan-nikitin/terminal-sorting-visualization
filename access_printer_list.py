@@ -1,4 +1,5 @@
 import functools
+import shutil
 
 import terminal_utils
 from terminal_utils import clear_terminal, move_cursor_to_start, colorama
@@ -8,11 +9,11 @@ class AccessPrinterList(list):
     """
     Class that visualizes access to its items in the terminal
     """
-    element_char = '▓'
+    ELEMENT_CHAR = '▓'
     ACCESS_ELEMENT_CHAR = '░'
     SORTED_ELEMENT_CHAR = '▒'
 
-    element_color = colorama.Back.WHITE
+    ELEMENT_COLOR = colorama.Back.WHITE
     ACCESS_ELEMENT_COLOR = colorama.Back.RED
     BACKGROUND_COLOR = colorama.Back.RESET
     FOREGROUND_COLOR = colorama.Fore.BLACK
@@ -32,6 +33,7 @@ class AccessPrinterList(list):
         self.__last_access_item = None
         self.__last_access_item_value = None
         self.__cursor_pos = 0
+        self.element_color = self.ELEMENT_COLOR
         self._first_print()
 
     def _first_print(self):
@@ -44,7 +46,7 @@ class AccessPrinterList(list):
             element_char = self.element_color + self.FOREGROUND_COLOR + '_'
             bg_char = self.BACKGROUND_COLOR + ' '
         else:
-            element_char = self.element_char
+            element_char = self.ELEMENT_CHAR
             bg_char = ' '
         for i in range(self.__maximum):
             for j in range(self.__length):
@@ -67,17 +69,42 @@ class AccessPrinterList(list):
         """
         Visualize item accessing (getting or setting) without using ANSI codes
         """
-        move_cursor_to_start()
         to_print = ''
         for i in range(self.__maximum):
             for j in range(self.__length):
                 if super().__getitem__(j) >= self.__maximum - i:
                     char = (self.ACCESS_ELEMENT_CHAR if item == j else
-                            self.element_char)
+                            self.ELEMENT_CHAR)
                     to_print += char
                 else:
                     to_print += ' '
             to_print += '\n'
+        to_print += '\n' * max(
+            shutil.get_terminal_size().lines - self.__maximum, 0
+        )
+        print(to_print, end='')
+
+    def __print_end_of_sort_without_ansi(self, item) -> None:
+        """
+        Visualize end of sort without using ANSI codes
+        """
+        to_print = ''
+        for i in range(self.__maximum):
+            for j in range(self.__length):
+                if super().__getitem__(j) >= self.__maximum - i:
+                    if j < item:
+                        char = self.SORTED_ELEMENT_CHAR
+                    elif j == item:
+                        char = self.ACCESS_ELEMENT_CHAR
+                    else:
+                        char = self.ELEMENT_CHAR
+                    to_print += char
+                else:
+                    to_print += ' '
+            to_print += '\n'
+        to_print += '\n' * max(
+            shutil.get_terminal_size().lines - self.__maximum, 0
+        )
         print(to_print, end='')
 
     def _print_element(self, item, color, previous_value=None) -> str:
@@ -149,7 +176,7 @@ class AccessPrinterList(list):
         self.__last_access_item = key
         self.__last_access_item_value = super().__getitem__(key)
 
-    def sort_finished(self):
+    def end_of_sort(self):
         if terminal_utils.colorama:
             if self:
                 self.__getitem__(0)
@@ -157,7 +184,8 @@ class AccessPrinterList(list):
             for i in range(1, len(self)):
                 self.__getitem__(i)
         else:
-            pass  # TODO
+            for i in range(len(self)):
+                self.__print_end_of_sort_without_ansi(i)
 
     def __setitem__(self, key, value):
         if isinstance(key, slice):
