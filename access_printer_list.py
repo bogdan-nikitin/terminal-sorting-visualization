@@ -1,8 +1,16 @@
 import functools
 import shutil
+import time
 
 import terminal_utils
-from terminal_utils import clear_terminal, move_cursor_to_start, colorama
+from terminal_utils import clear_terminal, colorama
+
+
+def flush_print(*args, **kwargs):
+    print(*args, end=kwargs.get('end', ''), flush=kwargs.get('flush', True),
+          **kwargs)
+    # TODO: Get time from args
+    time.sleep(0.0001)  # flushing doesn't happen without delay on mac os
 
 
 ELEMENT_CHAR = '▓'
@@ -14,7 +22,7 @@ SORTED_ELEMENT_CHAR = '▒'
 if terminal_utils.colorama:
     ELEMENT_COLOR = colorama.Back.WHITE
     ACCESS_ELEMENT_COLOR = colorama.Back.RED
-    BACKGROUND_COLOR = colorama.Back.RESET
+    BACKGROUND_COLOR = colorama.Back.BLUE
     FOREGROUND_COLOR = colorama.Fore.BLACK
     SORTED_BG_COLOR = colorama.Back.GREEN
 
@@ -23,6 +31,7 @@ class AccessPrinterList(list):
     """
     Class that visualizes access to its items in the terminal
     """
+
     @functools.wraps(list.__init__)
     def __init__(self, *args, **kwargs):
         """
@@ -43,11 +52,13 @@ class AccessPrinterList(list):
         Prints all elements for the first time
         """
         clear_terminal()
-        to_print = ''
+
         if terminal_utils.colorama:
+            to_print = BACKGROUND_COLOR + '\n'
             element_char = self.element_color + FOREGROUND_COLOR + '_'
             bg_char = BACKGROUND_COLOR + ' '
         else:
+            to_print = ''
             element_char = ELEMENT_CHAR
             bg_char = ' '
         for i in range(self.__maximum):
@@ -56,8 +67,10 @@ class AccessPrinterList(list):
                     to_print += element_char
                 else:
                     to_print += bg_char
+            if terminal_utils.colorama:
+                to_print += BACKGROUND_COLOR
             to_print += '\n'
-        print(to_print, end='')
+        flush_print(to_print)
 
     def recalculate(self):
         """
@@ -84,7 +97,7 @@ class AccessPrinterList(list):
         to_print += '\n' * max(
             shutil.get_terminal_size().lines - self.__maximum, 0
         )
-        print(to_print, end='')
+        flush_print(to_print)
 
     def __print_end_of_sort_without_ansi(self, item) -> None:
         """
@@ -107,7 +120,7 @@ class AccessPrinterList(list):
         to_print += '\n' * max(
             shutil.get_terminal_size().lines - self.__maximum, 0
         )
-        print(to_print, end='')
+        flush_print(to_print)
 
     def _print_element(self, item, color, previous_value=None) -> str:
         previous_value = previous_value or super().__getitem__(item)
@@ -157,7 +170,7 @@ class AccessPrinterList(list):
                 self.element_color,
                 self.__last_access_item_value
             )
-        print(to_print, end='')
+        flush_print(to_print)
         self.__last_access_item = item
         self.__last_access_item_value = None
 
@@ -174,7 +187,7 @@ class AccessPrinterList(list):
                 self.element_color,
                 self.__last_access_item_value
             )
-        print(to_print, end='')
+        flush_print(to_print)
         self.__last_access_item = key
         self.__last_access_item_value = super().__getitem__(key)
 

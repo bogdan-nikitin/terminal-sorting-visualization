@@ -229,9 +229,9 @@ class Program(Singleton):
                 print(terminal_utils.colorama.Back.RESET +
                       terminal_utils.colorama.Fore.RESET)
             print()
-            print('Sorted and visualized for', sort_time)
-            print('Original array', shuffled_arr)
-            print('Sorted array', list(to_sort_array))
+            print('Sorted and visualized for', sort_time, 'sec')
+            print('Original array:', shuffled_arr)
+            print('Sorted array:', list(to_sort_array))
         except KeyboardInterrupt:
             terminal_utils.clear_terminal()
             # print(terminal_utils.colorama.Back.RESET +
