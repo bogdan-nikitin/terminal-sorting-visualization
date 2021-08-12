@@ -5,23 +5,24 @@ import terminal_utils
 from terminal_utils import clear_terminal, move_cursor_to_start, colorama
 
 
-class AccessPrinterList(list):
-    """
-    Class that visualizes access to its items in the terminal
-    """
-    ELEMENT_CHAR = '▓'
-    ACCESS_ELEMENT_CHAR = '░'
-    SORTED_ELEMENT_CHAR = '▒'
+ELEMENT_CHAR = '▓'
+ACCESS_ELEMENT_CHAR = '░'
+SORTED_ELEMENT_CHAR = '▒'
+# ELEMENT_CHAR = colorama.Back.WHITE + ' '
+# ACCESS_ELEMENT_CHAR = colorama.Back.RED + ' '
 
+if terminal_utils.colorama:
     ELEMENT_COLOR = colorama.Back.WHITE
     ACCESS_ELEMENT_COLOR = colorama.Back.RED
     BACKGROUND_COLOR = colorama.Back.RESET
     FOREGROUND_COLOR = colorama.Fore.BLACK
     SORTED_BG_COLOR = colorama.Back.GREEN
 
-    # ELEMENT_CHAR = colorama.Back.WHITE + ' '
-    # ACCESS_ELEMENT_CHAR = colorama.Back.RED + ' '
 
+class AccessPrinterList(list):
+    """
+    Class that visualizes access to its items in the terminal
+    """
     @functools.wraps(list.__init__)
     def __init__(self, *args, **kwargs):
         """
@@ -33,7 +34,8 @@ class AccessPrinterList(list):
         self.__last_access_item = None
         self.__last_access_item_value = None
         self.__cursor_pos = 0
-        self.element_color = self.ELEMENT_COLOR
+        if terminal_utils.colorama:
+            self.element_color = ELEMENT_COLOR
         self._first_print()
 
     def _first_print(self):
@@ -43,10 +45,10 @@ class AccessPrinterList(list):
         clear_terminal()
         to_print = ''
         if terminal_utils.colorama:
-            element_char = self.element_color + self.FOREGROUND_COLOR + '_'
-            bg_char = self.BACKGROUND_COLOR + ' '
+            element_char = self.element_color + FOREGROUND_COLOR + '_'
+            bg_char = BACKGROUND_COLOR + ' '
         else:
-            element_char = self.ELEMENT_CHAR
+            element_char = ELEMENT_CHAR
             bg_char = ' '
         for i in range(self.__maximum):
             for j in range(self.__length):
@@ -73,8 +75,8 @@ class AccessPrinterList(list):
         for i in range(self.__maximum):
             for j in range(self.__length):
                 if super().__getitem__(j) >= self.__maximum - i:
-                    char = (self.ACCESS_ELEMENT_CHAR if item == j else
-                            self.ELEMENT_CHAR)
+                    char = (ACCESS_ELEMENT_CHAR if item == j else
+                            ELEMENT_CHAR)
                     to_print += char
                 else:
                     to_print += ' '
@@ -93,11 +95,11 @@ class AccessPrinterList(list):
             for j in range(self.__length):
                 if super().__getitem__(j) >= self.__maximum - i:
                     if j < item:
-                        char = self.SORTED_ELEMENT_CHAR
+                        char = SORTED_ELEMENT_CHAR
                     elif j == item:
-                        char = self.ACCESS_ELEMENT_CHAR
+                        char = ACCESS_ELEMENT_CHAR
                     else:
-                        char = self.ELEMENT_CHAR
+                        char = ELEMENT_CHAR
                     to_print += char
                 else:
                     to_print += ' '
@@ -118,26 +120,26 @@ class AccessPrinterList(list):
         value = super().__getitem__(item)
 
         if value >= previous_value:
-            to_print += color + self.FOREGROUND_COLOR
+            to_print += color + FOREGROUND_COLOR
             to_print += colorama.Cursor.UP(value)
             to_print += (
                                 '_' + colorama.Cursor.BACK() +
                                 colorama.Cursor.DOWN()
                         ) * value
-            to_print += self.BACKGROUND_COLOR
+            to_print += BACKGROUND_COLOR
         else:
-            to_print += self.BACKGROUND_COLOR
+            to_print += BACKGROUND_COLOR
             to_print += colorama.Cursor.UP(previous_value)
             to_print += (
                                 ' ' + colorama.Cursor.BACK() +
                                 colorama.Cursor.DOWN()
                         ) * (previous_value - value)
-            to_print += color + self.FOREGROUND_COLOR
+            to_print += color + FOREGROUND_COLOR
             to_print += (
                                 '_' + colorama.Cursor.BACK() +
                                 colorama.Cursor.DOWN()
                         ) * value
-            to_print += self.BACKGROUND_COLOR
+            to_print += BACKGROUND_COLOR
         # to_print += colorama.Cursor.BACK(item)
         self.__cursor_pos = item
         return to_print
@@ -148,7 +150,7 @@ class AccessPrinterList(list):
         """
         to_print = ''
 
-        to_print += self._print_element(item, self.ACCESS_ELEMENT_COLOR)
+        to_print += self._print_element(item, ACCESS_ELEMENT_COLOR)
         if self.__last_access_item is not None:
             to_print += self._print_element(
                 self.__last_access_item,
@@ -165,7 +167,7 @@ class AccessPrinterList(list):
         """
         to_print = ''
 
-        to_print += self._print_element(key, self.ACCESS_ELEMENT_COLOR)
+        to_print += self._print_element(key, ACCESS_ELEMENT_COLOR)
         if self.__last_access_item is not None:
             to_print += self._print_element(
                 self.__last_access_item,
@@ -180,7 +182,7 @@ class AccessPrinterList(list):
         if terminal_utils.colorama:
             if self:
                 self.__getitem__(0)
-            self.element_color = self.SORTED_BG_COLOR
+            self.element_color = SORTED_BG_COLOR
             for i in range(1, len(self)):
                 self.__getitem__(i)
         else:
