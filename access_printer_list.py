@@ -18,7 +18,8 @@ if terminal_utils.colorama:
     # TODO: Add ability to change these parameters from CLI
     ELEMENT_COLOR = colorama.Back.WHITE
     ACCESS_ELEMENT_COLOR = colorama.Back.RED
-    BACKGROUND_COLOR = colorama.Back.BLUE  # TODO: Change to RESET
+    # Should be changed to RESET, but BLUE is fine too
+    BACKGROUND_COLOR = colorama.Back.BLUE
     FOREGROUND_COLOR = colorama.Fore.BLACK
     SORTED_BG_COLOR = colorama.Back.GREEN
 
@@ -59,6 +60,9 @@ class AbstractAccessPrinterList(abc.ABC):
             sys.exit(1)
 
     def _print_frame(self, frame):
+        """
+        Prints the frame of visualization and catches a terminal resizing
+        """
         self._catch_terminal_resizing()
         print(frame, end='', flush=True)
         # flushing doesn't happen without delay on Mac OS
@@ -66,17 +70,20 @@ class AbstractAccessPrinterList(abc.ABC):
 
     @property
     @abc.abstractmethod
-    def _first_print_preface(self):
+    def _first_print_preface(self) -> str:
+        """
+        What to print before calling _first_print 
+        """
         pass
 
     @property
     @abc.abstractmethod
-    def _element_char(self):
+    def _element_char(self) -> str:
         pass
 
     @property
     @abc.abstractmethod
-    def _bg_color(self):
+    def _bg_color(self) -> str:
         pass
 
     def _first_print(self):
@@ -98,21 +105,18 @@ class AbstractAccessPrinterList(abc.ABC):
             to_print += self._bg_color + '\n'
         self._print_frame(to_print)
 
-    # Probably useless
-    def recalculate(self):
-        """
-        Recalculates the cached list properties. Always use it, when you change
-        original list
-        """
-        self._length = len(self._list)
-        self._maximum = max(self._list)
-
     @abc.abstractmethod
     def end_of_sort(self):
+        """
+        Should print sorting completion animation
+        """
         pass
 
     @abc.abstractmethod
-    def _setitem(self, key, value):
+    def _setitem(self, key: int, value: int):
+        """
+        Should handle __setitem__ call
+        """
         pass
 
     def __setitem__(self, key, value):
@@ -122,7 +126,10 @@ class AbstractAccessPrinterList(abc.ABC):
         return self._setitem(key, value)
 
     @abc.abstractmethod
-    def _getitem(self, item):
+    def _getitem(self, item: int):
+        """
+        Should handle __getitem__ call
+        """
         pass
 
     def __getitem__(self, item):
@@ -143,9 +150,12 @@ class ANSIAccessPrinterList(AbstractAccessPrinterList):
         self.__element_color = ELEMENT_COLOR
         super().__init__(lst, delay)
 
-    def __get_print_last_access_item(self):
+    def __get_to_print_last_access_item(self):
+        """
+        Repaints the last accessed element to the element color
+        """
         if self.__last_access_item is not None:
-            return self.__get_print_element(
+            return self.__get_to_print_element(
                 self.__last_access_item,
                 self.__element_color,
                 self.__last_access_item_value
@@ -153,19 +163,16 @@ class ANSIAccessPrinterList(AbstractAccessPrinterList):
         return ''
 
     def __print_item_setting(self, key):
-        """
-        Visualize item setting using ANSI codes
-        """
         to_print = ''
 
-        to_print += self.__get_print_element(key, ACCESS_ELEMENT_COLOR)
-        to_print += self.__get_print_last_access_item()
+        to_print += self.__get_to_print_element(key, ACCESS_ELEMENT_COLOR)
+        to_print += self.__get_to_print_last_access_item()
         self._print_frame(to_print)
         self.__last_access_item = key
         self.__last_access_item_value = self._list[key]
         # self.__last_access_item_value = value
 
-    def __get_print_element(self, item, color, previous_value=None):
+    def __get_to_print_element(self, item, color, previous_value=None):
         previous_value = previous_value or self._list[item]
         to_print = ''
         shift = item - self.__cursor_pos
@@ -195,13 +202,10 @@ class ANSIAccessPrinterList(AbstractAccessPrinterList):
         return to_print
 
     def __print_item_getting(self, item) -> None:
-        """
-        Visualize item getting using ANSI codes
-        """
         to_print = ''
 
-        to_print += self.__get_print_element(item, ACCESS_ELEMENT_COLOR)
-        to_print += self.__get_print_last_access_item()
+        to_print += self.__get_to_print_element(item, ACCESS_ELEMENT_COLOR)
+        to_print += self.__get_to_print_last_access_item()
         self._print_frame(to_print)
         self.__last_access_item = item
         self.__last_access_item_value = None
@@ -236,9 +240,6 @@ class ANSIAccessPrinterList(AbstractAccessPrinterList):
 
 class NoANSIAccessPrinterList(AbstractAccessPrinterList):
     def __print_end_of_sort_till_item(self, item) -> None:
-        """
-        Visualize end of sort without using ANSI codes
-        """
         to_print = ''
         for i in range(self._maximum):
             for j in range(self._length):
@@ -259,9 +260,6 @@ class NoANSIAccessPrinterList(AbstractAccessPrinterList):
         self._print_frame(to_print)
 
     def __print_item_accessing(self, item) -> None:
-        """
-        Visualize item accessing (getting or setting) without using ANSI codes
-        """
         to_print = ''
         for i in range(self._maximum):
             for j in range(self._length):
