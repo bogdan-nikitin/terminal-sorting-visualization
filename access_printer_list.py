@@ -1,17 +1,9 @@
-import functools
+import abc
 import shutil
 import time
 
 import terminal_utils
-from terminal_utils import clear_terminal, colorama
-
-
-def flush_print(*args, **kwargs):
-    print(*args, end=kwargs.get('end', ''), flush=kwargs.get('flush', True),
-          **kwargs)
-    # TODO: Get time from args
-    time.sleep(0.0001)  # flushing doesn't happen without delay on Mac OS
-
+from terminal_utils import colorama
 
 ELEMENT_CHAR = '▓'
 ACCESS_ELEMENT_CHAR = '░'
@@ -28,88 +20,212 @@ if terminal_utils.colorama:
     SORTED_BG_COLOR = colorama.Back.GREEN
 
 
-class AccessPrinterList(list):
+class AbstractAccessPrinterList(abc.ABC):
     """
     Class that visualizes access to its items in the terminal
     """
 
-    # TODO: Change inheritance to composition
-    # TODO: Split class into two (with colorama and without)
-    @functools.wraps(list.__init__)
-    def __init__(self, *args, **kwargs):
+    class SliceError(Exception):
+        def __init__(self):
+            super().__init__(
+                f'{AbstractAccessPrinterList.__name__} does not support slices'
+            )
+
+    def __init__(self, lst, delay):
         """
         Init list and cashes some list properties
         """
-        super().__init__(*args, **kwargs)
-        self.__length = len(self)
-        self.__maximum = max(self)
-        self.__last_access_item = None
-        self.__last_access_item_value = None
-        self.__cursor_pos = 0
-        if terminal_utils.colorama:
-            self.element_color = ELEMENT_COLOR
+        self.__delay = delay
+        self._list = lst
+        self._length = len(self._list)
+        self._maximum = max(self._list)
         self._first_print()
+
+    def _flush_print(self, *args, **kwargs):
+        print(*args, end=kwargs.get('end', ''), flush=kwargs.get('flush', True),
+              **kwargs)
+        # flushing doesn't happen without delay on Mac OS
+        time.sleep(self.__delay)
+
+    @property
+    @abc.abstractmethod
+    def _first_print_preface(self):
+        pass
+
+    @property
+    @abc.abstractmethod
+    def _element_char(self):
+        pass
+
+    @property
+    @abc.abstractmethod
+    def _bg_color(self):
+        pass
 
     def _first_print(self):
         """
         Prints all elements for the first time
         """
-        clear_terminal()
+        terminal_utils.clear_terminal()
 
-        if terminal_utils.colorama:
-            to_print = BACKGROUND_COLOR + '\n'
-            element_char = self.element_color + FOREGROUND_COLOR + '_'
-            bg_char = BACKGROUND_COLOR + ' '
-        else:
-            to_print = ''
-            element_char = ELEMENT_CHAR
-            bg_char = ' '
-        for i in range(self.__maximum):
-            for j in range(self.__length):
-                if super().__getitem__(j) >= self.__maximum - i:
+        to_print = self._first_print_preface
+        element_char = self._element_char
+        bg_char = self._bg_color + ' '
+
+        for i in range(self._maximum):
+            for j in range(self._length):
+                if self._list[j] >= self._maximum - i:
                     to_print += element_char
                 else:
                     to_print += bg_char
-            if terminal_utils.colorama:
-                to_print += BACKGROUND_COLOR
-            to_print += '\n'
-        flush_print(to_print)
+            to_print += self._bg_color + '\n'
+        self._flush_print(to_print)
 
+    # Probably useless
     def recalculate(self):
         """
-        Recalculates the cached list properties. Always use it, when you adding
-        or removing an element
+        Recalculates the cached list properties. Always use it, when you change
+        original list
         """
-        self.__length = len(self)
-        self.__maximum = max(self)
+        self._length = len(self._list)
+        self._maximum = max(self._list)
 
-    def __print_item_accessing_without_ansi(self, item) -> None:
+    @abc.abstractmethod
+    def end_of_sort(self):
+        pass
+
+    @abc.abstractmethod
+    def _setitem(self, key, value):
+        pass
+
+    def __setitem__(self, key, value):
+        if isinstance(key, slice):
+            raise AbstractAccessPrinterList.SliceError
+            # return self.__list.__setitem__(key, value)
+        return self._setitem(key, value)
+
+    @abc.abstractmethod
+    def _getitem(self, item):
+        pass
+
+    def __getitem__(self, item):
+        if isinstance(item, slice):
+            raise AbstractAccessPrinterList.SliceError
+        return self._getitem(item)
+
+    def __len__(self):
+        return self._length
+
+
+# colorama needed
+class ANSIAccessPrinterList(AbstractAccessPrinterList):
+    def __init__(self, lst, delay):
+        self.__last_access_item = None
+        self.__last_access_item_value = None
+        self.__cursor_pos = 0
+        self.__element_color = ELEMENT_COLOR
+        super().__init__(lst, delay)
+
+    def __get_print_last_access_item(self):
+        if self.__last_access_item is not None:
+            return self.__get_print_element(
+                self.__last_access_item,
+                self.__element_color,
+                self.__last_access_item_value
+            )
+        return ''
+
+    def __print_item_setting(self, key):
         """
-        Visualize item accessing (getting or setting) without using ANSI codes
+        Visualize item setting using ANSI codes
         """
         to_print = ''
-        for i in range(self.__maximum):
-            for j in range(self.__length):
-                if super().__getitem__(j) >= self.__maximum - i:
-                    char = (ACCESS_ELEMENT_CHAR if item == j else
-                            ELEMENT_CHAR)
-                    to_print += char
-                else:
-                    to_print += ' '
-            to_print += '\n'
-        to_print += '\n' * max(
-            shutil.get_terminal_size().lines - self.__maximum, 0
-        )
-        flush_print(to_print)
 
-    def __print_end_of_sort_without_ansi(self, item) -> None:
+        to_print += self.__get_print_element(key, ACCESS_ELEMENT_COLOR)
+        to_print += self.__get_print_last_access_item()
+        self._flush_print(to_print)
+        self.__last_access_item = key
+        self.__last_access_item_value = self._list[key]
+        # self.__last_access_item_value = value
+
+    def __get_print_element(self, item, color, previous_value=None):
+        previous_value = previous_value or self._list[item]
+        to_print = ''
+        shift = item - self.__cursor_pos
+        if shift > 0:
+            to_print += colorama.Cursor.FORWARD(shift)
+        elif shift < 0:
+            to_print += colorama.Cursor.BACK(-shift)
+        value = self._list[item]
+
+        if value >= previous_value:
+            to_print += color + FOREGROUND_COLOR
+            to_print += colorama.Cursor.UP(value)
+            to_print += ('_' + colorama.Cursor.BACK() +
+                         colorama.Cursor.DOWN()) * value
+            to_print += BACKGROUND_COLOR
+        else:
+            to_print += BACKGROUND_COLOR
+            to_print += colorama.Cursor.UP(previous_value)
+            to_print += (' ' + colorama.Cursor.BACK() +
+                         colorama.Cursor.DOWN()) * (previous_value - value)
+            to_print += color + FOREGROUND_COLOR
+            to_print += ('_' + colorama.Cursor.BACK() +
+                         colorama.Cursor.DOWN()) * value
+            to_print += BACKGROUND_COLOR
+        # to_print += colorama.Cursor.BACK(item)
+        self.__cursor_pos = item
+        return to_print
+
+    def __print_item_getting(self, item) -> None:
+        """
+        Visualize item getting using ANSI codes
+        """
+        to_print = ''
+
+        to_print += self.__get_print_element(item, ACCESS_ELEMENT_COLOR)
+        to_print += self.__get_print_last_access_item()
+        self._flush_print(to_print)
+        self.__last_access_item = item
+        self.__last_access_item_value = None
+
+    @property
+    def _first_print_preface(self):
+        return BACKGROUND_COLOR + '\n'
+
+    @property
+    def _element_char(self):
+        return self.__element_color + FOREGROUND_COLOR + '_'
+
+    @property
+    def _bg_color(self):
+        return BACKGROUND_COLOR
+
+    def end_of_sort(self):
+        if self:
+            self.__getitem__(0)
+        self.__element_color = SORTED_BG_COLOR
+        for i in range(1, self._length):
+            self.__getitem__(i)
+
+    def _setitem(self, key, value):
+        self.__print_item_setting(key)
+        return self._list.__setitem__(key, value)
+
+    def _getitem(self, item):
+        self.__print_item_getting(item)
+        return self._list[item]
+
+
+class NoANSIAccessPrinterList(AbstractAccessPrinterList):
+    def __print_end_of_sort_till_item(self, item) -> None:
         """
         Visualize end of sort without using ANSI codes
         """
         to_print = ''
-        for i in range(self.__maximum):
-            for j in range(self.__length):
-                if super().__getitem__(j) >= self.__maximum - i:
+        for i in range(self._maximum):
+            for j in range(self._length):
+                if self._list[j] >= self._maximum - i:
                     if j < item:
                         char = SORTED_ELEMENT_CHAR
                     elif j == item:
@@ -121,107 +237,58 @@ class AccessPrinterList(list):
                     to_print += ' '
             to_print += '\n'
         to_print += '\n' * max(
-            shutil.get_terminal_size().lines - self.__maximum, 0
+            shutil.get_terminal_size().lines - self._maximum, 0
         )
-        flush_print(to_print)
+        self._flush_print(to_print)
 
-    def _print_element(self, item, color, previous_value=None) -> str:
-        previous_value = previous_value or super().__getitem__(item)
-        to_print = ''
-        shift = item - self.__cursor_pos
-        if shift > 0:
-            to_print += colorama.Cursor.FORWARD(shift)
-        elif shift < 0:
-            to_print += colorama.Cursor.BACK(-shift)
-        value = super().__getitem__(item)
-
-        if value >= previous_value:
-            to_print += color + FOREGROUND_COLOR
-            to_print += colorama.Cursor.UP(value)
-            to_print += (
-                                '_' + colorama.Cursor.BACK() +
-                                colorama.Cursor.DOWN()
-                        ) * value
-            to_print += BACKGROUND_COLOR
-        else:
-            to_print += BACKGROUND_COLOR
-            to_print += colorama.Cursor.UP(previous_value)
-            to_print += (
-                                ' ' + colorama.Cursor.BACK() +
-                                colorama.Cursor.DOWN()
-                        ) * (previous_value - value)
-            to_print += color + FOREGROUND_COLOR
-            to_print += (
-                                '_' + colorama.Cursor.BACK() +
-                                colorama.Cursor.DOWN()
-                        ) * value
-            to_print += BACKGROUND_COLOR
-        # to_print += colorama.Cursor.BACK(item)
-        self.__cursor_pos = item
-        return to_print
-
-    def __print_item_getting_with_ansi(self, item) -> None:
+    def __print_item_accessing(self, item) -> None:
         """
-        Visualize item getting using ANSI codes
+        Visualize item accessing (getting or setting) without using ANSI codes
         """
         to_print = ''
+        for i in range(self._maximum):
+            for j in range(self._length):
+                if self._list[j] >= self._maximum - i:
+                    char = (ACCESS_ELEMENT_CHAR if item == j else
+                            ELEMENT_CHAR)
+                    to_print += char
+                else:
+                    to_print += ' '
+            to_print += '\n'
+        to_print += '\n' * max(
+            shutil.get_terminal_size().lines - self._maximum, 0
+        )
+        self._flush_print(to_print)
 
-        to_print += self._print_element(item, ACCESS_ELEMENT_COLOR)
-        if self.__last_access_item is not None:
-            to_print += self._print_element(
-                self.__last_access_item,
-                self.element_color,
-                self.__last_access_item_value
-            )
-        flush_print(to_print)
-        self.__last_access_item = item
-        self.__last_access_item_value = None
+    @property
+    def _first_print_preface(self):
+        return ''
 
-    def __print_item_setting_with_ansi(self, key, value):
-        """
-        Visualize item setting using ANSI codes
-        """
-        to_print = ''
+    @property
+    def _element_char(self):
+        return ELEMENT_CHAR
 
-        to_print += self._print_element(key, ACCESS_ELEMENT_COLOR)
-        if self.__last_access_item is not None:
-            to_print += self._print_element(
-                self.__last_access_item,
-                self.element_color,
-                self.__last_access_item_value
-            )
-        flush_print(to_print)
-        self.__last_access_item = key
-        self.__last_access_item_value = super().__getitem__(key)
+    @property
+    def _bg_color(self):
+        return ''
 
     def end_of_sort(self):
-        if terminal_utils.colorama:
-            if self:
-                self.__getitem__(0)
-            self.element_color = SORTED_BG_COLOR
-            for i in range(1, len(self)):
-                self.__getitem__(i)
-        else:
-            for i in range(len(self)):
-                self.__print_end_of_sort_without_ansi(i)
+        for i in range(self._length):
+            self.__print_end_of_sort_till_item(i)
 
-    def __setitem__(self, key, value):
-        if isinstance(key, slice):
-            return super().__setitem__(key, value)
-        if terminal_utils.colorama:
-            self.__print_item_setting_with_ansi(key, value)
-            return super().__setitem__(key, value)
-        else:
-            self.__print_item_accessing_without_ansi(key)
-            item = super().__setitem__(key, value)
-            self.__print_item_accessing_without_ansi(key)
-            return item
+    def _setitem(self, key, value):
+        self.__print_item_accessing(key)
+        result = self._list.__setitem__(key, value)
+        self.__print_item_accessing(key)
+        return result
 
-    def __getitem__(self, item):
-        if isinstance(item, slice):
-            return super().__getitem__(item)
-        if terminal_utils.colorama:
-            self.__print_item_getting_with_ansi(item)
-        else:
-            self.__print_item_accessing_without_ansi(item)
-        return super().__getitem__(item)
+    def _getitem(self, item):
+        self.__print_item_accessing(item)
+        return self._list[item]
+
+
+def choose_access_printer_list_class():
+    if terminal_utils.colorama:
+        return ANSIAccessPrinterList
+    else:
+        return NoANSIAccessPrinterList

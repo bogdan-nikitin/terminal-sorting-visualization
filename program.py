@@ -6,7 +6,7 @@ import time
 import typing
 
 import terminal_utils
-from access_printer_list import AccessPrinterList
+from access_printer_list import choose_access_printer_list_class
 from singleton import Singleton
 from sorting_algorithms import SORTING_ALGORITHMS
 
@@ -45,6 +45,11 @@ Disables terminal size checking for --min, --max and --length arguments'
 DELAY_HELP = '''
 Delay in ms after printing one 'frame'; some terminals are printing too fast, 
 so delay is required. By default is 1 ms
+'''
+FULL_SCREEN_HELP = '''
+Run sorting visualization in full-screen mode (set the --length and --max 
+parameters equal to the size of the terminal). Specifying these parameters 
+manually will overwrite the set values
 '''
 
 
@@ -86,8 +91,42 @@ class Program(Singleton):
 
     def _init_parser(self):
         """
-        Inits command-line arguments parser
+        Init command-line arguments parser
         """
+        self._parser.add_argument(
+            '--full-screen', '-f',
+            help=FULL_SCREEN_HELP,
+            dest='full_screen',
+            action='store_true'
+        )
+        self._parser.add_argument(
+            '--min', '-n',
+            default=DEFAULT_MINIMUM,
+            help=MIN_HELP,
+            type=int,
+            dest='min'
+        )
+        self._parser.add_argument(
+            '--max', '-x',
+            help=MAX_HELP,
+            type=int,
+            dest='max'
+        )
+        self._parser.add_argument(
+            '-N', '--length',
+            help=LENGTH_HELP,
+            type=int,
+            dest='length'
+        )
+
+        self._parser.add_argument(
+            '--delay', '-d',
+            default=DEFAULT_DELAY,
+            help=DELAY_HELP,
+            type=float,
+            dest='delay'
+        )
+
         self._parser.add_argument(
             '-a', '--algorithm',
             default=self._sorting_algorithms_names[0],
@@ -103,27 +142,9 @@ class Program(Singleton):
             help=SCRIPT_ARG_HELP,
             dest='script'
         )
+
         self._parser.add_argument(
-            '--min',
-            default=DEFAULT_MINIMUM,
-            help=MIN_HELP,
-            type=int,
-            dest='min'
-        )
-        self._parser.add_argument(
-            '--max',
-            help=MAX_HELP,
-            type=int,
-            dest='max'
-        )
-        self._parser.add_argument(
-            '-N', '--length',
-            help=LENGTH_HELP,
-            type=int,
-            dest='length'
-        )
-        self._parser.add_argument(
-            '--no-colorama', '-n',
+            '--no-colorama', '-c',
             help=NO_COLORAMA_HELP,
             dest='no_colorama',
             action='store_true'
@@ -134,14 +155,6 @@ class Program(Singleton):
             help=DISABLE_TERMINAL_SIZE_CHECKING_HELP,
             dest='size_checking',
             action='store_false'
-        )
-
-        self._parser.add_argument(
-            '--delay',
-            default=DEFAULT_DELAY,
-            help=DELAY_HELP,
-            type=float,
-            dest='delay'
         )
 
     def _is_args_valid(self) -> bool:
@@ -195,10 +208,14 @@ class Program(Singleton):
             return False
 
         if self._args.max is None:
-            self._max_element = lines // 2
+            if self._args.full_screen:
+                self._max_element = lines - 1
+            else:
+                self._max_element = lines // 2
         else:
             if self._args.size_checking and self._args.max >= lines:
-                print('Error. --max value must be less than your terminal size')
+                print('Error. --max value must be less than your terminal '
+                      'size')
                 print_terminal_size(columns, lines)
                 return False
             elif not self._args.max >= self._args.min:
@@ -208,19 +225,23 @@ class Program(Singleton):
             self._max_element = self._args.max
 
         if self._args.length is None:
-            self._array_length = columns // 2
+            if self._args.full_screen:
+                self._array_length = columns - 1
+            else:
+                self._array_length = columns // 2
         else:
             if not self._args.length > 0:
                 print('Error. --length value must be greater than 0')
                 return False
             elif self._args.size_checking and self._args.length >= columns:
-                print('Error. --length value must be less than terminal size')
+                print('Error. --length value must be less than terminal '
+                      'size')
                 print_terminal_size(columns, lines)
                 return False
             self._array_length = self._args.length
 
-        if not self._args.delay > 0:
-            print('Error. --delay must be greater than 0')
+        if not self._args.delay >= 0:
+            print('Error. --delay must be at least zero')
             return False
 
         # Everything is correct
@@ -243,11 +264,12 @@ class Program(Singleton):
         array = create_array(self._min_element,
                              self._max_element,
                              self._array_length)
-        to_sort_array = array.copy()
-        shuffled_arr = to_sort_array.copy()
-        to_sort_array = AccessPrinterList(to_sort_array)
+        array_before = array.copy()
+        to_sort_array = choose_access_printer_list_class()(
+            array, self._args.delay / 1000
+        )
 
-        # Visualising sorting
+        # Visualizing sort
         try:
             start_time = time.time()
             self._sorting_function(to_sort_array)
@@ -259,10 +281,8 @@ class Program(Singleton):
                       terminal_utils.colorama.Fore.RESET)
             print()
             print('Sorted and visualized for', sort_time, 'sec')
-            print('Original array:', shuffled_arr)
-            print('Sorted array:', list(to_sort_array))
+            print('Original array:', array_before)
+            print('Sorted array:', array)
         except KeyboardInterrupt:
             terminal_utils.clear_terminal()
-            # print(terminal_utils.colorama.Back.RESET +
-            #       terminal_utils.colorama.Fore.RESET)
             print('Error. Program execution was interrupted')
