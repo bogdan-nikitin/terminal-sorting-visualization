@@ -1,10 +1,13 @@
 import abc
 import shutil
+import sys
 import time
 
 import terminal_utils
 from terminal_utils import colorama
 
+
+# TODO: Make it class members
 ELEMENT_CHAR = '▓'
 ACCESS_ELEMENT_CHAR = '░'
 SORTED_ELEMENT_CHAR = '▒'
@@ -18,6 +21,10 @@ if terminal_utils.colorama:
     BACKGROUND_COLOR = colorama.Back.BLUE  # TODO: Change to RESET
     FOREGROUND_COLOR = colorama.Fore.BLACK
     SORTED_BG_COLOR = colorama.Back.GREEN
+
+
+ANSI_ELEMENT_CHAR = '_'
+BACKGROUND_CHAR = ' '
 
 
 class AbstractAccessPrinterList(abc.ABC):
@@ -39,11 +46,21 @@ class AbstractAccessPrinterList(abc.ABC):
         self._list = lst
         self._length = len(self._list)
         self._maximum = max(self._list)
+        self.__terminal_size = shutil.get_terminal_size()
         self._first_print()
 
-    def _flush_print(self, *args, **kwargs):
-        print(*args, end=kwargs.get('end', ''), flush=kwargs.get('flush', True),
-              **kwargs)
+    def _catch_terminal_resizing(self):
+        """
+        Exits if catches a terminal resizing
+        """
+        if shutil.get_terminal_size() != self.__terminal_size:
+            terminal_utils.clear_terminal()
+            print('Error. Terminal size changed. Execution stopped')
+            sys.exit(1)
+
+    def _print_frame(self, frame):
+        self._catch_terminal_resizing()
+        print(frame, end='', flush=True)
         # flushing doesn't happen without delay on Mac OS
         time.sleep(self.__delay)
 
@@ -70,7 +87,7 @@ class AbstractAccessPrinterList(abc.ABC):
 
         to_print = self._first_print_preface
         element_char = self._element_char
-        bg_char = self._bg_color + ' '
+        bg_char = self._bg_color + BACKGROUND_CHAR
 
         for i in range(self._maximum):
             for j in range(self._length):
@@ -79,7 +96,7 @@ class AbstractAccessPrinterList(abc.ABC):
                 else:
                     to_print += bg_char
             to_print += self._bg_color + '\n'
-        self._flush_print(to_print)
+        self._print_frame(to_print)
 
     # Probably useless
     def recalculate(self):
@@ -143,7 +160,7 @@ class ANSIAccessPrinterList(AbstractAccessPrinterList):
 
         to_print += self.__get_print_element(key, ACCESS_ELEMENT_COLOR)
         to_print += self.__get_print_last_access_item()
-        self._flush_print(to_print)
+        self._print_frame(to_print)
         self.__last_access_item = key
         self.__last_access_item_value = self._list[key]
         # self.__last_access_item_value = value
@@ -161,16 +178,16 @@ class ANSIAccessPrinterList(AbstractAccessPrinterList):
         if value >= previous_value:
             to_print += color + FOREGROUND_COLOR
             to_print += colorama.Cursor.UP(value)
-            to_print += ('_' + colorama.Cursor.BACK() +
+            to_print += (ANSI_ELEMENT_CHAR + colorama.Cursor.BACK() +
                          colorama.Cursor.DOWN()) * value
             to_print += BACKGROUND_COLOR
         else:
             to_print += BACKGROUND_COLOR
             to_print += colorama.Cursor.UP(previous_value)
-            to_print += (' ' + colorama.Cursor.BACK() +
+            to_print += (BACKGROUND_CHAR + colorama.Cursor.BACK() +
                          colorama.Cursor.DOWN()) * (previous_value - value)
             to_print += color + FOREGROUND_COLOR
-            to_print += ('_' + colorama.Cursor.BACK() +
+            to_print += (ANSI_ELEMENT_CHAR + colorama.Cursor.BACK() +
                          colorama.Cursor.DOWN()) * value
             to_print += BACKGROUND_COLOR
         # to_print += colorama.Cursor.BACK(item)
@@ -185,7 +202,7 @@ class ANSIAccessPrinterList(AbstractAccessPrinterList):
 
         to_print += self.__get_print_element(item, ACCESS_ELEMENT_COLOR)
         to_print += self.__get_print_last_access_item()
-        self._flush_print(to_print)
+        self._print_frame(to_print)
         self.__last_access_item = item
         self.__last_access_item_value = None
 
@@ -195,7 +212,7 @@ class ANSIAccessPrinterList(AbstractAccessPrinterList):
 
     @property
     def _element_char(self):
-        return self.__element_color + FOREGROUND_COLOR + '_'
+        return self.__element_color + FOREGROUND_COLOR + ANSI_ELEMENT_CHAR
 
     @property
     def _bg_color(self):
@@ -234,12 +251,12 @@ class NoANSIAccessPrinterList(AbstractAccessPrinterList):
                         char = ELEMENT_CHAR
                     to_print += char
                 else:
-                    to_print += ' '
+                    to_print += BACKGROUND_CHAR
             to_print += '\n'
         to_print += '\n' * max(
             shutil.get_terminal_size().lines - self._maximum, 0
         )
-        self._flush_print(to_print)
+        self._print_frame(to_print)
 
     def __print_item_accessing(self, item) -> None:
         """
@@ -253,12 +270,12 @@ class NoANSIAccessPrinterList(AbstractAccessPrinterList):
                             ELEMENT_CHAR)
                     to_print += char
                 else:
-                    to_print += ' '
+                    to_print += BACKGROUND_CHAR
             to_print += '\n'
         to_print += '\n' * max(
             shutil.get_terminal_size().lines - self._maximum, 0
         )
-        self._flush_print(to_print)
+        self._print_frame(to_print)
 
     @property
     def _first_print_preface(self):

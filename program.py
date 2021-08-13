@@ -157,10 +157,11 @@ class Program(Singleton):
             action='store_false'
         )
 
-    def _is_args_valid(self) -> bool:
+    def _check_and_proceed_args(self) -> bool:
         """
         Validates arguments and prints an error message if the arguments are
         incorrect
+        Also sets the array properties
         :return: True if the arguments are valid else False
         """
         algorithm = self._args.algorithm
@@ -253,7 +254,7 @@ class Program(Singleton):
         everything is OK visualize array sorting
         """
         self._args = self._parser.parse_args()
-        if not self._is_args_valid():
+        if not self._check_and_proceed_args():
             return
 
         if self._args.no_colorama:
