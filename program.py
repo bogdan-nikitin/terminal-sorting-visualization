@@ -11,30 +11,41 @@ from singleton import Singleton
 from sorting_algorithms import SORTING_ALGORITHMS
 
 DEFAULT_MINIMUM = 1
-DESCRIPTION = (
-    'Visualization of sorting algorithms in a terminal. For better experience '
-    'you need to install the colorama package'
-)
-ALGORITHM_ARG_HELP = (
-    'Sorting algorithm which be visualized. You may choose one of the builtin '
-    'algorithms or specify the algorithm from an external script (in this way '
-    'this argument means the function name from the --script argument; '
-    'function must accept a single argument - sorting array and mustn\'t '
-    'return anything; array must be sorted in-place). The builtin algorithms '
-    'are {sorting_algorithms_names}'
-)
-SCRIPT_ARG_HELP = (
-    'Path to the external script where sorting algorithm will be imported from'
-)
+DEFAULT_DELAY = 1
+
+# The text will be formatted by argparse
+DESCRIPTION = '''
+Visualization of sorting algorithms in a terminal. For better visualization you 
+need to install the "colorama" python package (with it, the program uses ANSI 
+escape sequences for faster rendering and color rendering)
+'''
+ALGORITHM_ARG_HELP = '''
+Sorting algorithm which be visualized. You may choose one of the builtin 
+algorithms or specify the algorithm from an external script (in this way this 
+argument means the function name from the --script argument; function must 
+accept a single argument - sorting array and mustn't return anything; array 
+must be sorted in-place). The builtin algorithms are {sorting_algorithms_names}
+'''
+SCRIPT_ARG_HELP = '''
+Path to the external script where sorting algorithm will be imported from
+'''
 MIN_HELP = 'Minimum value of the generating array. Must be greater, than 0'
-MAX_HELP = (
-    'Maximum value of the generating array. Must be greater, than --min value. '
-    'By default it\'s equal to half of the height of the terminal'
-)
-LENGTH_HELP = (
-    'Count of the array elements. Must be greater, than 0. By default it\'s '
-    'equal to half of the width of the terminal'
-)
+MAX_HELP = '''
+Maximum value of the generating array. Must be greater than or equal to --min 
+value
+'''
+LENGTH_HELP = '''
+Count of the array elements. Must be greater, than 0. By default it's equal to 
+half of the width of the terminal
+'''
+NO_COLORAMA_HELP = 'Disables the use of colorama, even if it is installed'
+DISABLE_TERMINAL_SIZE_CHECKING_HELP = '''
+Disables terminal size checking for --min, --max and --length arguments'
+'''
+DELAY_HELP = '''
+Delay in ms after printing one 'frame'; some terminals are printing too fast, 
+so delay is required. By default is 1 ms
+'''
 
 
 def print_terminal_size(columns=None, lines=None):
@@ -59,9 +70,7 @@ def create_array(
 class Program(Singleton):
     def __init__(self):
         self._sorting_algorithms_names = list(SORTING_ALGORITHMS.keys())
-        self._parser = argparse.ArgumentParser(
-            description=DESCRIPTION
-        )
+        self._parser = argparse.ArgumentParser(description=DESCRIPTION)
         self._init_parser()
 
         # Parser arguments
@@ -115,8 +124,24 @@ class Program(Singleton):
         )
         self._parser.add_argument(
             '--no-colorama', '-n',
+            help=NO_COLORAMA_HELP,
             dest='no_colorama',
             action='store_true'
+        )
+
+        self._parser.add_argument(
+            '--disable-terminal-size-checking',
+            help=DISABLE_TERMINAL_SIZE_CHECKING_HELP,
+            dest='size_checking',
+            action='store_false'
+        )
+
+        self._parser.add_argument(
+            '--delay',
+            default=DEFAULT_DELAY,
+            help=DELAY_HELP,
+            type=float,
+            dest='delay'
         )
 
     def _is_args_valid(self) -> bool:
@@ -164,7 +189,7 @@ class Program(Singleton):
         if not self._args.min > 0:
             print('Error. --min value must be greater than 0')
             return False
-        elif self._args.min >= lines:
+        elif self._args.size_checking and self._args.min >= lines:
             print('Error. --min value must be less than your terminal size')
             print_terminal_size(columns, lines)
             return False
@@ -172,7 +197,7 @@ class Program(Singleton):
         if self._args.max is None:
             self._max_element = lines // 2
         else:
-            if self._args.max >= lines:
+            if self._args.size_checking and self._args.max >= lines:
                 print('Error. --max value must be less than your terminal size')
                 print_terminal_size(columns, lines)
                 return False
@@ -188,11 +213,15 @@ class Program(Singleton):
             if not self._args.length > 0:
                 print('Error. --length value must be greater than 0')
                 return False
-            elif self._args.length >= columns:
+            elif self._args.size_checking and self._args.length >= columns:
                 print('Error. --length value must be less than terminal size')
                 print_terminal_size(columns, lines)
                 return False
             self._array_length = self._args.length
+
+        if not self._args.delay > 0:
+            print('Error. --delay must be greater than 0')
+            return False
 
         # Everything is correct
         return True

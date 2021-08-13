@@ -10,7 +10,7 @@ def flush_print(*args, **kwargs):
     print(*args, end=kwargs.get('end', ''), flush=kwargs.get('flush', True),
           **kwargs)
     # TODO: Get time from args
-    time.sleep(0.0001)  # flushing doesn't happen without delay on mac os
+    time.sleep(0.0001)  # flushing doesn't happen without delay on Mac OS
 
 
 ELEMENT_CHAR = '▓'
@@ -20,9 +20,10 @@ SORTED_ELEMENT_CHAR = '▒'
 # ACCESS_ELEMENT_CHAR = colorama.Back.RED + ' '
 
 if terminal_utils.colorama:
+    # TODO: Add ability to change these parameters from CLI
     ELEMENT_COLOR = colorama.Back.WHITE
     ACCESS_ELEMENT_COLOR = colorama.Back.RED
-    BACKGROUND_COLOR = colorama.Back.BLUE
+    BACKGROUND_COLOR = colorama.Back.BLUE  # TODO: Change to RESET
     FOREGROUND_COLOR = colorama.Fore.BLACK
     SORTED_BG_COLOR = colorama.Back.GREEN
 
@@ -32,6 +33,8 @@ class AccessPrinterList(list):
     Class that visualizes access to its items in the terminal
     """
 
+    # TODO: Change inheritance to composition
+    # TODO: Split class into two (with colorama and without)
     @functools.wraps(list.__init__)
     def __init__(self, *args, **kwargs):
         """
