@@ -39,9 +39,6 @@ Count of the array elements. Must be greater, than 0. By default it's equal to
 half of the width of the terminal
 '''
 NO_COLORAMA_HELP = 'Disables the use of colorama, even if it is installed'
-DISABLE_TERMINAL_SIZE_CHECKING_HELP = '''
-Disables terminal size checking for --min, --max and --length arguments'
-'''
 DELAY_HELP = '''
 Delay in ms after printing one 'frame'; some terminals are printing too fast, 
 so delay is required. By default is 1 ms
@@ -150,13 +147,6 @@ class Program(Singleton):
             action='store_true'
         )
 
-        self._parser.add_argument(
-            '--disable-terminal-size-checking',
-            help=DISABLE_TERMINAL_SIZE_CHECKING_HELP,
-            dest='size_checking',
-            action='store_false'
-        )
-
     def _check_and_proceed_args(self) -> bool:
         """
         Validates arguments and prints an error message if the arguments are
@@ -203,7 +193,7 @@ class Program(Singleton):
         if not self._args.min > 0:
             print('Error. --min value must be greater than 0')
             return False
-        elif self._args.size_checking and self._args.min >= lines:
+        elif self._args.min >= lines:
             print('Error. --min value must be less than your terminal size')
             print_terminal_size(columns, lines)
             return False
@@ -214,7 +204,7 @@ class Program(Singleton):
             else:
                 self._max_element = lines // 2
         else:
-            if self._args.size_checking and self._args.max >= lines:
+            if self._args.max >= lines:
                 print('Error. --max value must be less than your terminal '
                       'size')
                 print_terminal_size(columns, lines)
@@ -234,7 +224,7 @@ class Program(Singleton):
             if not self._args.length > 0:
                 print('Error. --length value must be greater than 0')
                 return False
-            elif self._args.size_checking and self._args.length >= columns:
+            elif self._args.length >= columns:
                 print('Error. --length value must be less than terminal '
                       'size')
                 print_terminal_size(columns, lines)
