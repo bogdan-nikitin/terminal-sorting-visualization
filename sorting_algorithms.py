@@ -1,10 +1,11 @@
-def qsort(array, left=0, right=-1):
+# Quick sort
+def quick_sort(array, left=0, right=-1):
     if right < 0:
         right = len(array) - 1
     if left < right:
         support = _partition(array, left, right)
-        qsort(array, left, support)
-        qsort(array, support + 1, right)
+        quick_sort(array, left, support)
+        quick_sort(array, support + 1, right)
 
 
 def _partition(array, left, right):
@@ -22,6 +23,7 @@ def _partition(array, left, right):
     return right
 
 
+# Merge sort
 def _merge(arr, left, mid, end):
     right = mid + 1
 
@@ -69,6 +71,7 @@ def merge_sort(arr, left=0, right=None):
         _merge(arr, left, m, right)
 
 
+# Bubble sort
 def bubble_sort(array):
     length = len(array)
     for i in range(length - 1):
@@ -77,6 +80,7 @@ def bubble_sort(array):
                 array[j], array[j + 1] = array[j + 1], array[j]
 
 
+# Cocktail shaker sort
 def cocktail_shaker_sort(array):
     left = 0
     right = len(array) - 1
@@ -93,9 +97,49 @@ def cocktail_shaker_sort(array):
         left += 1
 
 
+# Radix sort
+def _counting_sort(array, place):
+    size = len(array)
+    output = [0] * size
+    count = [0] * 10
+
+    # Calculate count of elements
+    for i in range(0, size):
+        index = array[i] // place
+        count[index % 10] += 1
+
+    # Calculate cumulative count
+    for i in range(1, 10):
+        count[i] += count[i - 1]
+
+    # Place the elements in sorted order
+    i = size - 1
+    while i >= 0:
+        index = array[i] // place
+        output[count[index % 10] - 1] = array[i]
+        count[index % 10] -= 1
+        i -= 1
+
+    for i in range(0, size):
+        array[i] = output[i]
+
+
+# Main function to implement radix sort
+def radix_sort(array):
+    # Get maximum element
+    max_element = max(array)
+
+    # Apply counting sort to sort elements based on place value.
+    place = 1
+    while max_element // place > 0:
+        _counting_sort(array, place)
+        place *= 10
+
+
 SORTING_ALGORITHMS = {
-    'quicksort': qsort,
+    'quicksort': quick_sort,
     'bubble_sort': bubble_sort,
     'merge_sort': merge_sort,
-    'cocktail_shaker_sort': cocktail_shaker_sort
+    'cocktail_shaker_sort': cocktail_shaker_sort,
+    'radix_sort': radix_sort
 }

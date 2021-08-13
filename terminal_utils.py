@@ -1,4 +1,5 @@
 import os
+import shutil
 
 from singleton import CallSingleton
 
@@ -8,7 +9,7 @@ except ModuleNotFoundError:
     colorama = None
 
 
-class _ClearConsole(CallSingleton):
+class _ClearTerminal(CallSingleton):
     def __init__(self):
         super().__init__()
         if colorama:
@@ -20,7 +21,7 @@ class _ClearConsole(CallSingleton):
         elif os.name in ('linux', 'osx', 'posix'):
             self._call = lambda: os.system("clear")
         else:
-            self._call = lambda: print("\n" * 120)
+            self._call = lambda: print("\n" * shutil.get_terminal_size()[1])
 
 
 class _MoveCursorToStart(CallSingleton):
@@ -33,7 +34,7 @@ class _MoveCursorToStart(CallSingleton):
 
 
 def clear_terminal():
-    _ClearConsole()()
+    _ClearTerminal()()
 
 
 def move_cursor_to_start():
